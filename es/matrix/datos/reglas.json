@@ -1,0 +1,7 @@
+{
+  "sincronizacion": { "nivelMinimo": 80 },
+  "carga": { "nivelMaximo": 90.0 },
+  "integridad": { "nivelMinimo": 80 },
+  "sujetos": { "permitirCambiosDeZonaNoAutorizados": false },
+  "agentes": { "permitirAccionesFueraDeProtocolo": false }
+}
