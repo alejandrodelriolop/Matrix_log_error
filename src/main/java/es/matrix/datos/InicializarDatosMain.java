@@ -1,4 +1,5 @@
 package es.matrix.datos;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import es.matrix.modelo.Evento;
 import es.matrix.modelo.NodoRegistro;
@@ -9,12 +10,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /** Punto de entrada de la fase 1: crea datos iniciales y prueba las cuatro persistencias. */
 public class InicializarDatosMain {
-    private static final Path DATOS = Path.of("es/matrix/datos");
+    private static final Path DATOS = Path.of("datos");
 
     public static void main(String[] args) {
+        try {
+            RunLogging.iniciar("inicializacion");
+        } catch (Exception e) {
+            System.err.println("No se pudieron preparar los logs: " + e.getMessage());
+            return;
+        }
+        Logger logger = LogManager.getLogger(InicializarDatosMain.class);
+        Logger evidencia = LogManager.getLogger("EVIDENCIA");
         try {
             Files.createDirectories(DATOS);
             crearReglasSiNoExisten();
@@ -35,7 +46,11 @@ public class InicializarDatosMain {
             System.out.println("Sincronización mínima: " + reglas.path("sincronizacion").path("nivelMinimo").asInt());
             System.out.println("XML válido; raíz: " + mundo.leerEstado().getDocumentElement().getTagName());
             System.out.println("Fase 1 inicializada correctamente.");
+            logger.info("Inicialización y comprobación de datos completadas");
+            evidencia.info("INICIALIZACION_COMPLETADA | eventos={} | nodos={}", eventos.leerTodos().size(), nodos.contarRegistros());
         } catch (Exception e) {
+            logger.error("No se pudo inicializar la fase 1", e);
+            evidencia.error("ERROR_INICIALIZACION | mensaje={}", e.getMessage());
             System.err.println("No se pudo inicializar la fase 1: " + e.getMessage());
             e.printStackTrace();
         }
