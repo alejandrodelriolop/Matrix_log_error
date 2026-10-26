@@ -1,14 +1,24 @@
-// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
 package es.matrix.datos;
 
 import java.nio.file.Path;
 import java.util.Scanner;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+/** Punto de entrada del simulador Matrix. */
 public class SimuladorMain {
-
-
     public static void main(String[] args) {
+        try {
+            RunLogging.iniciar("simulador");
+        } catch (Exception e) {
+            System.err.println("No se pudieron preparar los logs: " + e.getMessage());
+            return;
+        }
+        Logger logger = LogManager.getLogger(SimuladorMain.class);
+        Logger evidencia = LogManager.getLogger("EVIDENCIA");
         Path carpetaDatos = Path.of("datos");
+        logger.info("Inicio del punto de entrada del simulador");
+        evidencia.info("INICIO_EJECUCION | tipo=simulador");
         try (Scanner teclado = new Scanner(System.in)) {
             System.out.println("=== MATRIX: SIMULADOR ===");
             System.out.println("1. Simulación normal (puede aparecer un incidente aleatorio)");
@@ -40,14 +50,18 @@ public class SimuladorMain {
 
             SimuladorMatrix simulador = new SimuladorMatrix(carpetaDatos, 30, modoPruebas, incidenteElegido);
             simulador.ejecutar();
+            logger.info("Simulación finalizada normalmente");
+            evidencia.info("FIN_EJECUCION | resultado=FINALIZACION_NORMAL");
         } catch (EventoCriticoException e) {
+            logger.error("Incidente crítico; parada controlada: {}", e.getMessage());
+            evidencia.error("INCIDENTE_CRITICO | descripcion={}", e.getMessage());
             System.err.println("INCIDENTE CRÍTICO REGISTRADO: " + e.getMessage());
             System.err.println("La simulación se ha detenido de forma controlada.");
         } catch (Exception e) {
+            logger.error("No se pudo ejecutar el simulador", e);
+            evidencia.error("ERROR_EJECUCION | mensaje={}", e.getMessage());
             System.err.println("No se pudo ejecutar el simulador: " + e.getMessage());
             e.printStackTrace();
         }
     }
 }
-
-
