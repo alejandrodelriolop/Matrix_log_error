@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="0">
+    <Properties>
+        <Property name="runtimeDir">logs/runtime</Property>
+        <Property name="evidenceDir">logs/evidencias</Property>
+        <Property name="runId">${sys:matrix.runId:-sin-identificador}</Property>
+        <Property name="pattern">%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%t] %c{1} - %msg%n</Property>
+    </Properties>
+    <Appenders>
+        <RollingFile name="RuntimeFile"
+                     fileName="${runtimeDir}/matrix-runtime.log"
+                     filePattern="${runtimeDir}/matrix-runtime-%d{yyyy-MM-dd}-%i.log.gz"
+                     append="true" ignoreExceptions="false">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="5 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10" fileIndex="min"/>
+        </RollingFile>
+        <File name="EvidenceFile"
+              fileName="${evidenceDir}/matrix-${runId}.log"
+              append="false" createOnDemand="true" ignoreExceptions="false">
+            <PatternLayout pattern="${pattern}"/>
+        </File>
+        <Console name="Console" target="SYSTEM_ERR">
+            <PatternLayout pattern="%highlight{%d{HH:mm:ss} %-5level - %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue, TRACE=blue}"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="EVIDENCIA" level="info" additivity="false">
+            <AppenderRef ref="EvidenceFile"/>
+            <AppenderRef ref="Console" level="warn"/>
+        </Logger>
+        <Root level="info">
+            <AppenderRef ref="RuntimeFile"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
