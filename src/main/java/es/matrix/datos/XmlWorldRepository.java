@@ -54,7 +54,22 @@ public class XmlWorldRepository {
         nodo.setAttribute("estado", estado);
         guardar(document);
     }
-
+    public void actualizarIntegridadZona(String idZona, int integridad, String estado) throws IOException {
+        if (integridad < 0 || integridad > 100) throw new IllegalArgumentException("La integridad debe estar entre 0 y 100.");
+        Document document = leerEstado();
+        Element zona = buscarPorId(document, "zona", idZona);
+        if (zona == null) throw new IOException("No existe la zona " + idZona + ".");
+        zona.setAttribute("integridad", Integer.toString(integridad));
+        zona.setAttribute("estado", estado);
+        guardar(document);
+    }
+    public void actualizarEstadoAgente(String idAgente, String estado) throws IOException {
+        Document document = leerEstado();
+        Element agente = buscarPorId(document, "agente", idAgente);
+        if (agente == null) throw new IOException("No existe el agente " + idAgente + ".");
+        agente.setAttribute("estado", estado);
+        guardar(document);
+    }
     public void actualizarZonaSujeto(String idSujeto, String idZona) throws IOException {
         Document document = leerEstado();
         if (buscarPorId(document, "zona", idZona) == null) {
