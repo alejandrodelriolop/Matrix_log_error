@@ -1,4 +1,4 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
