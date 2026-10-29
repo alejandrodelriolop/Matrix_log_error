@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import es.matrix.modelo.Evento;
 import es.matrix.modelo.NodoRegistro;
+import es.matrix.modelo.ResultadoForense;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -126,6 +127,7 @@ public class AnalizadorForense {
             w.write("INFORME FORENSE MATRIX\n======================\n");
             w.write("Eventos analizados: " + eventos.size() + "\n");
             w.write("Incidente: " + h.nombre() + "\nNivel de certeza: " + h.certeza() + "\n");
+            if (!h.eventos().isEmpty()) w.write("ID de ejecución: " + h.eventos().get(0).idEjecucion() + "\n");
             w.write("Conclusión: " + h.conclusion() + "\n\nEvidencias relevantes:\n");
             if (h.eventos().isEmpty()) w.write("- No hay un evento textual concluyente.\n");
             for (Evento e : h.eventos()) w.write("- " + e.aLinea() + "\n");
@@ -176,3 +178,4 @@ public class AnalizadorForense {
     private record Hallazgo(String nombre, String conclusion, List<Evento> eventos, Set<Integer> idsNodosBinarios,
                             Set<String> entidades, Set<String> zonas, String certeza) { }
 }
+
