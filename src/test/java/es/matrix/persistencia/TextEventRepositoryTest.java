@@ -1,6 +1,7 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
 import es.matrix.modelo.Evento;
+import es.matrix.persistencia.TextEventRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
