@@ -1,7 +1,11 @@
-package es.matrix.datos;
+package es.matrix.simulador;
 
 import java.nio.file.Path;
 import java.util.Scanner;
+
+import es.matrix.configuracion.RunLogging;
+import es.matrix.incidentes.EventoCriticoException;
+import es.matrix.incidentes.IncidenteMatrix;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,7 +20,7 @@ public class SimuladorMain {
         }
         Logger logger = LogManager.getLogger(SimuladorMain.class);
         Logger evidencia = LogManager.getLogger("EVIDENCIA");
-        Path carpetaDatos = Path.of("datos");
+        Path carpetaDatos = Path.of("simulador");
         logger.info("Inicio del punto de entrada del simulador");
         evidencia.info("INICIO_EJECUCION | tipo=simulador");
 
