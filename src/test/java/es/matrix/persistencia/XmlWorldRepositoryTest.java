@@ -1,5 +1,6 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
+import es.matrix.persistencia.XmlWorldRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
