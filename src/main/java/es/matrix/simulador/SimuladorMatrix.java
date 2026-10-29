@@ -1,7 +1,14 @@
-package es.matrix.datos;
+package es.matrix.simulador;
 
+
+import es.matrix.incidentes.EventoCriticoException;
+import es.matrix.incidentes.IncidenteMatrix;
 import es.matrix.modelo.Evento;
 import es.matrix.modelo.NodoRegistro;
+import es.matrix.persistencia.BinaryNodeRepository;
+import es.matrix.persistencia.JsonRulesRepository;
+import es.matrix.persistencia.TextEventRepository;
+import es.matrix.persistencia.XmlWorldRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
@@ -15,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 /** Coordina el ciclo de simulación y la persistencia de operaciones e incidentes. */
 public class SimuladorMatrix {
@@ -30,6 +38,7 @@ public class SimuladorMatrix {
     private XmlWorldRepository mundo;
     private JsonRulesRepository reglasRepository;
     private int siguienteEvento;
+    private String idEjecucion;
 
     public SimuladorMatrix(Path carpetaDatos, int duracionSegundos, boolean modoPruebas, IncidenteMatrix incidenteElegido) {
         if (carpetaDatos == null) throw new IllegalArgumentException("La carpeta de datos es obligatoria.");
@@ -47,6 +56,9 @@ public class SimuladorMatrix {
         LOGGER.info("Datos iniciales validados; modo={}, duración={} segundos", modoPruebas ? "PRUEBAS" : "NORMAL", duracionSegundos);
         EVIDENCIA.info("DATOS_VALIDADOS | modo={} | duracionSegundos={}", modoPruebas ? "PRUEBAS" : "NORMAL", duracionSegundos);
         siguienteEvento = eventos.leerTodos().size() + 1;
+        idEjecucion = "RUN-" + UUID.randomUUID();
+        LOGGER.info("Iniciando ejecución {}", idEjecucion);
+        EVIDENCIA.info("INICIO_EJECUCION | idEjecucion={}", idEjecucion);
         System.out.println("Inicio de Matrix. Duración máxima: " + duracionSegundos + " segundos.");
         System.out.println("Modo: " + (modoPruebas ? "PRUEBAS" : "NORMAL"));
         long inicio = System.nanoTime();
@@ -161,14 +173,14 @@ public class SimuladorMatrix {
                 guardarEvento("N003", "COMPROBACION_INTEGRIDAD", idZona, "ALERTA");
             }
         }
-        EVIDENCIA.error("INCIDENTE_PERSISTIDO | codigo={} | descripcion={}", incidente.name(), incidente.descripcion());
+        EVIDENCIA.error("INCIDENTE_PERSISTIDO | idEjecucion={} | codigo={} | descripcion={}", idEjecucion, incidente.name(), incidente.descripcion());
         LOGGER.error("Incidente {} persistido en los archivos de datos", incidente.name());
         System.out.println("\nEvidencia del incidente persistida: " + incidente.descripcion());
         throw new EventoCriticoException(incidente.descripcion());
     }
 
     private void guardarEvento(String actorId, String tipo, String objetivo, String resultado) throws IOException {
-        Evento evento = new Evento(String.format("E%04d", siguienteEvento++), LocalDateTime.now().withNano(0), actorId, tipo, objetivo, resultado);
+        Evento evento = new Evento(String.format("E%04d", siguienteEvento++), idEjecucion, LocalDateTime.now().withNano(0), actorId, tipo, objetivo, resultado);
         eventos.guardar(evento);
         EVIDENCIA.info("EVENTO_PERSISTIDO | id={} | fechaHora={} | actor={} | tipo={} | objetivo={} | resultado={}",
                 evento.idEvento(), evento.fechaHora(), evento.actorId(), evento.tipoOperacion(), evento.objetivoId(), evento.resultado());
