@@ -1,4 +1,4 @@
-package es.matrix.datos;
+package es.matrix.configuracion;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
