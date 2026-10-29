@@ -1,4 +1,4 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
