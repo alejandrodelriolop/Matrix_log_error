@@ -1,6 +1,6 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
-import es.matrix.datos.BinaryNodeRepository;
+import es.matrix.persistencia.BinaryNodeRepository;
 import es.matrix.modelo.NodoRegistro;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
