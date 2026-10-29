@@ -1,0 +1,9 @@
+CAMBIO DE CONTRATO: idEjecucion
+
+Formato nuevo de operaciones.txt (7 campos):
+idEvento|idEjecucion|fechaHora|actorId|tipoOperacion|objetivoId|resultado
+
+Cada nueva ejecución genera un ID RUN- único. Los eventos históricos de seis campos se leen como LEGACY
+y no se les inventa un identificador real. Al volver a guardar un evento antiguo, se serializa en el nuevo formato con LEGACY.
+
+No borres operaciones.txt sin copia de seguridad. Este cambio identifica eventos por ejecución; el analizador forense todavía debe ampliarse por separado para devolver varios hallazgos en un mismo informe.
