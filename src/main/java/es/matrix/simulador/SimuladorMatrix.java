@@ -98,6 +98,11 @@ public class SimuladorMatrix {
     }
 
     private void validarDatosIniciales() throws IOException {
+        System.out.println("BIN utilizado: " +
+                carpetaDatos.resolve("nodos.dat").toAbsolutePath());
+
+        System.out.println("Registros encontrados: " +
+                nodos.contarRegistros());
         if (nodos.contarRegistros() != 4) throw new IOException("nodos.dat debe contener exactamente los cuatro nodos. Ejecuta primero InicializarDatosMain.");
         mundo.leerEstado();
         reglasRepository.leerReglas();
