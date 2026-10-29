@@ -67,7 +67,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
-                    <mainClass>es.matrix.datos.InicializarDatosMain</mainClass>
+                    <mainClass>es.matrix.simulador.InicializarDatosMain</mainClass>
                 </configuration>
             </plugin>
         </plugins>
