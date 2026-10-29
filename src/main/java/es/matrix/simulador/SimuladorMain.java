@@ -20,7 +20,11 @@ public class SimuladorMain {
         }
         Logger logger = LogManager.getLogger(SimuladorMain.class);
         Logger evidencia = LogManager.getLogger("EVIDENCIA");
-        Path carpetaDatos = Path.of("simulador");
+        Path carpetaDatos = Path.of("datos");
+        System.out.println(
+                "Archivo BIN: " +
+                        carpetaDatos.resolve("nodos.dat").toAbsolutePath()
+        );
         logger.info("Inicio del punto de entrada del simulador");
         evidencia.info("INICIO_EJECUCION | tipo=simulador");
 
