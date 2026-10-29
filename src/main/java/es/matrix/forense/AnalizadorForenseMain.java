@@ -1,5 +1,7 @@
 package es.matrix.forense;
 
+import es.matrix.modelo.ResultadoForense;
+
 import java.nio.file.Path;
 import java.util.Scanner;
 
@@ -9,7 +11,7 @@ public class AnalizadorForenseMain {
         Path raiz = Path.of(System.getProperty("user.dir"));
         try (Scanner teclado = new Scanner(System.in)) {
             System.out.println("=== MATRIX: ANALIZADOR FORENSE ===");
-            System.out.println("Carpeta de datos: " + raiz.resolve("datos").toAbsolutePath());
+            System.out.println("Carpeta de simulador: " + raiz.resolve("simulador").toAbsolutePath());
             System.out.println("Se analizarán los archivos persistidos; no se consulta la memoria del simulador.");
             String respuesta = "";
             // Bucle que se repite hasta que se introduzca S o N (ignorando mayúsculas/minúsculas)
@@ -26,7 +28,7 @@ public class AnalizadorForenseMain {
                     System.out.println("Dato no correcto. Por favor, introduce S o N.");
                 }
             }
-            ResultadoForense resultado = new AnalizadorForense(raiz.resolve("datos"), raiz.resolve("resultados")).analizar();
+            ResultadoForense resultado = new AnalizadorForense(raiz.resolve("simulador"), raiz.resolve("resultados")).analizar();
             System.out.println("\nAnálisis terminado.");
             System.out.println("Incidente detectado: " + resultado.incidente());
             System.out.println("Conclusión: " + resultado.conclusion());
