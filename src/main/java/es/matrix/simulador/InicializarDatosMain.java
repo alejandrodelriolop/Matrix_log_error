@@ -1,6 +1,7 @@
-package es.matrix.datos;
+package es.matrix.simulador;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import es.matrix.configuracion.RunLogging;
 import es.matrix.modelo.Evento;
 import es.matrix.modelo.NodoRegistro;
 
@@ -10,12 +11,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import es.matrix.persistencia.BinaryNodeRepository;
+import es.matrix.persistencia.JsonRulesRepository;
+import es.matrix.persistencia.TextEventRepository;
+import es.matrix.persistencia.XmlWorldRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/** Punto de entrada de la fase 1: crea datos iniciales y prueba las cuatro persistencias. */
+/** Punto de entrada de la fase 1: crea simulador iniciales y prueba las cuatro persistencias. */
 public class InicializarDatosMain {
-    private static final Path DATOS = Path.of("datos");
+    private static final Path DATOS = Path.of("simulador");
 
     public static void main(String[] args) {
         try {
@@ -38,7 +44,7 @@ public class InicializarDatosMain {
             XmlWorldRepository mundo = new XmlWorldRepository(DATOS.resolve("estado.xml"));
             JsonRulesRepository reglasRepo = new JsonRulesRepository(DATOS.resolve("reglas.json"));
 
-            System.out.println("=== Matrix: comprobación de contrato de datos ===");
+            System.out.println("=== Matrix: comprobación de contrato de simulador ===");
             System.out.println("Eventos TXT leídos: " + eventos.leerTodos().size());
             System.out.println("Registros BIN: " + nodos.contarRegistros());
             System.out.println("Nodo N002 leído por acceso directo: " + nodos.leerPorId(2));
@@ -46,7 +52,7 @@ public class InicializarDatosMain {
             System.out.println("Sincronización mínima: " + reglas.path("sincronizacion").path("nivelMinimo").asInt());
             System.out.println("XML válido; raíz: " + mundo.leerEstado().getDocumentElement().getTagName());
             System.out.println("Fase 1 inicializada correctamente.");
-            logger.info("Inicialización y comprobación de datos completadas");
+            logger.info("Inicialización y comprobación de simulador completadas");
             evidencia.info("INICIALIZACION_COMPLETADA | eventos={} | nodos={}", eventos.leerTodos().size(), nodos.contarRegistros());
         } catch (Exception e) {
             logger.error("No se pudo inicializar la fase 1", e);
