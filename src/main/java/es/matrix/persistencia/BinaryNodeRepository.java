@@ -68,8 +68,7 @@ public class BinaryNodeRepository {
             escribirRegistro(raf, nodo);
         }
     }
-
-    public long contarRegistros() throws IOException {
+ public long contarRegistros() throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(archivo.toFile(), "r")) {
             validarLongitud(raf.length());
             return raf.length() / NodoRegistro.TAMANO_REGISTRO;
