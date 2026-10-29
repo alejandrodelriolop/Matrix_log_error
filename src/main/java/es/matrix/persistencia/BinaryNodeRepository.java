@@ -1,4 +1,4 @@
-package es.matrix.datos;
+package es.matrix.persistencia;
 
 import es.matrix.modelo.NodoRegistro;
 
