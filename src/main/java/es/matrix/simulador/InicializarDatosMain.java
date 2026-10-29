@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
 
 /** Punto de entrada de la fase 1: crea simulador iniciales y prueba las cuatro persistencias. */
 public class InicializarDatosMain {
-    private static final Path DATOS = Path.of("simulador");
+    private static final Path DATOS = Path.of("datos");
 
     public static void main(String[] args) {
         try {
