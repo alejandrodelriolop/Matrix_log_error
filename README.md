@@ -12,20 +12,22 @@ Proyecto Maven para establecer las cuatro persistencias del contrato de datos:
 - JDK 21 o superior.
 - Maven.
 - IntelliJ IDEA (opcional).
-
 ## Ejecutar
 
 Desde la carpeta raíz del proyecto:
 
 ```bash
-mvn clean compile exec:java
+mvn Çclean compile exec:java
 ```
 
-La primera ejecución crea los ficheros que falten y muestra una comprobación de lectura de las cuatro persistencias. No sobrescribe el XML, JSON ni TXT que ya existan. El BIN se crea con cuatro registros si todavía no existe o está vacío.
+La primera ejecución crea los ficheros que falten y muestra una comprobación de lectura 
+de las cuatro persistencias. No sobrescribe el XML, JSON ni TXT que ya existan. 
+El BIN se crea con cuatro registros si todavía no existe o está vacío.
 
 ## Notas
 
-Esta fase solo implementa el contrato y las operaciones básicas de persistencia. Todavía no implementa el simulador de 30 segundos, los seis incidentes, Log4j, el analizador forense ni las salidas
+Esta fase solo implementa el contrato y las operaciones básicas de persistencia. 
+Todavía no implementa el simulador de 30 segundos, los seis incidentes, Log4j, el analizador forense ni las salidas
 
 # Matrix — Fase 2: simulador básico
 
@@ -42,7 +44,8 @@ Proyecto Maven para la práctica de persistencia de datos de Matrix.
 - Actualiza el estado del nodo correspondiente en `datos/estado.xml`.
 - Lee `datos/reglas.json` y comprueba que los datos iniciales son válidos.
 
-**Importante:** el modo de pruebas está preparado como opción de ejecución, pero la selección e inyección real de los seis incidentes se implementará en la fase 3. Esta fase todavía no incorpora Log4j ni el analizador forense.
+**Importante:** el modo de pruebas está preparado como opción de ejecución, pero la selección e inyección real 
+de los seis incidentes se implementará en la fase 3. Esta fase todavía no incorpora Log4j ni el analizador forense.
 
 
 ## Preparar los datos
@@ -60,7 +63,7 @@ Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinici
 Desde la raíz del proyecto:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.datos.SimuladorMain
+mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
 ```
 
 Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
@@ -134,7 +137,7 @@ Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinici
 Desde la raíz del proyecto:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.datos.SimuladorMain
+mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
 ```
 
 Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
@@ -202,7 +205,8 @@ Se añade `es.matrix.forense.AnalizadorForenseMain`, un segundo punto de entrada
     - `anomalias.dat`: registros binarios relevantes para el hallazgo.
     - `entidades_afectadas.json`: subconjunto de entidades afectadas encontrado en el XML.
 
-El analizador no usa los logs de Log4j como fuente de detección. Si no encuentra evidencias concluyentes, informa `INDETERMINADO` en vez de afirmar un incidente sin pruebas. Los archivos de resultados se sobrescriben en cada análisis.
+El analizador no usa los logs de Log4j como fuente de detección. Si no encuentra evidencias concluyentes, 
+informa `INDETERMINADO` en vez de afirmar un incidente sin pruebas. Los archivos de resultados se sobrescriben en cada análisis.
 
 # Matrix — Fase 6: pruebas y documentación
 
@@ -224,11 +228,25 @@ Las pruebas usan carpetas temporales de JUnit; no deberían modificar los archiv
 - Actualización de estado XML y rechazo de estados inválidos.
 
 ## Ejecutar la aplicación
-- Inicialización: `es.matrix.datos.InicializarDatosMain`
-- Simulador: `es.matrix.datos.SimuladorMain`
+- Inicialización: `simulador`
+- Simulador: `simulador`
 - Analizador: `es.matrix.forense.AnalizadorForenseMain`
 
 No ejecutes `InicializarDatosMain` entre la simulación y el análisis si necesitas conservar las evidencias generadas.
 
 ## Limitaciones conocidas
-Esta batería verifica componentes de persistencia de forma aislada. Antes de entregar, ejecuta manualmente los seis incidentes desde el modo de pruebas y comprueba los tres artefactos de `resultados/`. También hay que revisar que el analizador distingue incidentes cuando se acumulan datos de varias ejecuciones. La compilación debe verificarse en el entorno local con JDK 21 y Maven.
+Esta batería verifica componentes de persistencia de forma aislada. 
+Antes de entregar, ejecuta manualmente los seis incidentes desde el modo de pruebas y comprueba los tres artefactos de `resultados/`. 
+También hay que revisar que el analizador distingue incidentes cuando se acumulan datos de varias ejecuciones. 
+La compilación debe verificarse en el entorno local con JDK 21 y Maven.
+
+## Identificador de ejecución en el histórico
+
+El formato nuevo de `datos/operaciones.txt` tiene siete campos:
+`idEvento|idEjecucion|fechaHora|actorId|tipoOperacion|objetivoId|resultado`.
+Cada arranque del simulador genera un identificador `RUN-...` que se reutiliza en todos los eventos de esa ejecución.
+Las líneas antiguas de seis campos se pueden leer y se etiquetan como `LEGACY`, porque no existe información suficiente para reconstruir su ejecución original. 
+Los eventos nuevos se guardan siempre en formato de siete campos.
+
+El identificador permite agrupar eventos por ejecución, pero por sí solo no conserva estados históricos de BIN/XML 
+ni convierte el analizador actual en un analizador de múltiples hallazgos.                                                º
