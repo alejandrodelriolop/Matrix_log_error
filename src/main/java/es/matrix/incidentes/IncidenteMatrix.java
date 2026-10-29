@@ -1,4 +1,4 @@
-package es.matrix.datos;
+package es.matrix.incidentes;
 
 /** Incidentes que se pueden reproducir en el modo de pruebas. */
 public enum IncidenteMatrix {
