@@ -12,6 +12,12 @@ import org.apache.logging.log4j.Logger;
 /** Punto de entrada del simulador Matrix. */
 public class SimuladorMain {
     public static void main(String[] args) {
+        try(Scanner teclado = new Scanner(System.in)){
+            ejecutar(teclado);
+        }
+    }
+
+    public static void ejecutar(Scanner teclado) {
         try {
             RunLogging.iniciar("simulador");
         } catch (Exception e) {
@@ -28,7 +34,7 @@ public class SimuladorMain {
         logger.info("Inicio del punto de entrada del simulador");
         evidencia.info("INICIO_EJECUCION | tipo=simulador");
 
-        try (Scanner teclado = new Scanner(System.in)) {
+        try {
             boolean continuarSimulando = true;
 
             while (continuarSimulando) {
