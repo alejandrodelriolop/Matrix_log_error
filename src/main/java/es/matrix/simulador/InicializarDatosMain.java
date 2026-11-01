@@ -24,6 +24,9 @@ public class InicializarDatosMain {
     private static final Path DATOS = Path.of("datos");
 
     public static void main(String[] args) {
+        ejecutar();
+    }
+    public static void ejecutar(){
         try {
             RunLogging.iniciar("inicializacion");
         } catch (Exception e) {
@@ -151,3 +154,4 @@ public class InicializarDatosMain {
         }
     }
 }
+
