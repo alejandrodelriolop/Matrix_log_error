@@ -17,7 +17,7 @@ Proyecto Maven para establecer las cuatro persistencias del contrato de datos:
 Desde la carpeta raíz del proyecto:
 
 ```bash
-mvn Çclean compile exec:java
+mvn clean compile exec:java
 ```
 
 La primera ejecución crea los ficheros que falten y muestra una comprobación de lectura 
@@ -63,7 +63,7 @@ Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinici
 Desde la raíz del proyecto:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
+mvn compile exec:java -Dexec.mainClass=es.matrix.main.Main
 ```
 
 Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
@@ -137,7 +137,7 @@ Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinici
 Desde la raíz del proyecto:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
+mvn compile exec:java -Dexec.mainClass=es.matrix.main.Main
 ```
 
 Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
