@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashSet;
 
 /** Analiza exclusivamente los archivos persistidos por el simulador. */
 public class AnalizadorForense {
@@ -79,33 +80,128 @@ public class AnalizadorForense {
         return f.newDocumentBuilder().parse(archivo.toFile());
     }
 
-    private Hallazgo detectar(List<Evento> eventos, Document xml, Map<String, Object> reglas) throws IOException {
+    private Hallazgo detectar(List<Evento> eventos, Document xml,
+                              Map<String, Object> reglas) throws IOException {
+
         // Se buscan evidencias explícitas en el histórico, empezando por la más reciente.
         for (int i = eventos.size() - 1; i >= 0; i--) {
+
             Evento e = eventos.get(i);
-            if (e.resultado().equals("ALERTA") && e.tipoOperacion().equals("COMPROBACION_SINCRONIZACION"))
-                return hallazgo("Pérdida de sincronización", e, "El histórico registra una alerta de sincronización y el estado binario debe confirmar una sincronización anómala.", Set.of(1), Set.of(e.actorId(), e.objetivoId()), Set.of());
-            if (e.tipoOperacion().equals("CAMBIO_ZONA") && e.resultado().equals("NO_AUTORIZADO"))
-                return hallazgo("Comportamiento anómalo de un sujeto", e, "Se registró un cambio de zona marcado como no autorizado; se contrasta con la ubicación actual en XML.", Set.of(), Set.of(e.actorId(), e.objetivoId()), Set.of());
-            if (e.tipoOperacion().equals("ACCESO") && e.resultado().equals("ACCESO_NO_AUTORIZADO_EJECUTADO"))
-                return hallazgo("Acceso no autorizado", e, "El histórico indica que se ejecutó un acceso no autorizado.", Set.of(), Set.of(e.actorId(), e.objetivoId()), Set.of());
-            if (e.tipoOperacion().equals("OPERACION_NODO") && e.resultado().equals("FALLO"))
-                return hallazgo("Fallo de nodo", e, "El histórico registra un fallo de nodo; el estado binario permite confirmar el código de fallo.", Set.of(idBinarioDesdeXml(xml, e.actorId())), Set.of(e.actorId()), Set.of());
-            if (e.tipoOperacion().equals("ACCION_AGENTE") && e.resultado().equals("FUERA_PROTOCOLO"))
-                return hallazgo("Agente fuera de protocolo", e, "El agente ha realizado una acción identificada como fuera de protocolo.", Set.of(), Set.of(e.actorId(), e.objetivoId()), Set.of());
-            if (e.tipoOperacion().equals("COMPROBACION_INTEGRIDAD") && e.resultado().equals("ALERTA"))
-                return hallazgo("Alteración de zona", e, "Se ha registrado una alerta de integridad para una zona.", Set.of(3), Set.of(e.actorId(), e.objetivoId()), Set.of());
-        }
-        // Respaldo por estado persistido si no hay una marca de incidente inequívoca en TXT.
-        try (RandomAccessFile raf = new RandomAccessFile(datos.resolve("nodos.dat").toFile(), "r")) {
-            if (raf.length() % NodoRegistro.TAMANO_REGISTRO != 0) throw new IOException("nodos.dat está incompleto o corrupto.");
-            while (raf.getFilePointer() < raf.length()) {
-                NodoRegistro n = new NodoRegistro(raf.readInt(), raf.readInt(), raf.readDouble(), raf.readInt(), raf.readLong());
-                if (n.nivelSincronizacion() < 80) return new Hallazgo("Pérdida de sincronización", "Sincronización inferior al umbral configurado; la evidencia textual específica no está disponible.", List.of(), Set.of(n.idNumerico()), Set.of("N00" + n.idNumerico()), Set.of(), "INDETERMINADO");
-                if (n.codigoEstado() == 2) return new Hallazgo("Fallo de nodo", "El estado binario marca un nodo como fallido.", List.of(), Set.of(n.idNumerico()), Set.of("N00" + n.idNumerico()), Set.of(), "ALTA");
+
+            if (e.resultado().equals("ALERTA")
+                    && e.tipoOperacion().equals("COMPROBACION_SINCRONIZACION")) {
+
+                return hallazgo("Pérdida de sincronización", e,
+                        "El histórico registra una alerta de sincronización y el estado binario debe confirmar una sincronización anómala.",
+                        Set.of(1),
+                        crearConjunto(e.actorId(), e.objetivoId()),
+                        Set.of());
+            }
+
+            if (e.tipoOperacion().equals("CAMBIO_ZONA")
+                    && e.resultado().equals("NO_AUTORIZADO")) {
+
+                return hallazgo("Comportamiento anómalo de un sujeto", e,
+                        "Se registró un cambio de zona marcado como no autorizado; se contrasta con la ubicación actual en XML.",
+                        Set.of(),
+                        crearConjunto(e.actorId(), e.objetivoId()),
+                        Set.of());
+            }
+
+            if (e.tipoOperacion().equals("ACCESO")
+                    && e.resultado().equals("ACCESO_NO_AUTORIZADO_EJECUTADO")) {
+
+                return hallazgo("Acceso no autorizado", e,
+                        "El histórico indica que se ejecutó un acceso no autorizado.",
+                        Set.of(),
+                        crearConjunto(e.actorId(), e.objetivoId()),
+                        Set.of());
+            }
+
+            if (e.tipoOperacion().equals("OPERACION_NODO")
+                    && e.resultado().equals("FALLO")) {
+
+                return hallazgo("Fallo de nodo", e,
+                        "El histórico registra un fallo de nodo; el estado binario permite confirmar el código de fallo.",
+                        Set.of(idBinarioDesdeXml(xml, e.actorId())),
+                        Set.of(e.actorId()),
+                        Set.of());
+            }
+
+            if (e.tipoOperacion().equals("ACCION_AGENTE")
+                    && e.resultado().equals("FUERA_PROTOCOLO")) {
+
+                return hallazgo("Agente fuera de protocolo", e,
+                        "El agente ha realizado una acción identificada como fuera de protocolo.",
+                        Set.of(),
+                        crearConjunto(e.actorId(), e.objetivoId()),
+                        Set.of());
+            }
+
+            if (e.tipoOperacion().equals("COMPROBACION_INTEGRIDAD")
+                    && e.resultado().equals("ALERTA")) {
+
+                return hallazgo("Alteración de zona", e,
+                        "Se ha registrado una alerta de integridad para una zona.",
+                        Set.of(3),
+                        crearConjunto(e.actorId(), e.objetivoId()),
+                        Set.of());
             }
         }
-        return new Hallazgo("No determinado", "No se encontraron evidencias suficientes para atribuir uno de los seis incidentes.", List.of(), Set.of(), Set.of(), Set.of(), "INDETERMINADO");
+
+        // Respaldo por estado persistido si no hay una marca de incidente inequívoca en TXT.
+        try (RandomAccessFile raf = new RandomAccessFile(
+                datos.resolve("nodos.dat").toFile(), "r")) {
+
+            if (raf.length() % NodoRegistro.TAMANO_REGISTRO != 0) {
+                throw new IOException("nodos.dat está incompleto o corrupto.");
+            }
+
+            while (raf.getFilePointer() < raf.length()) {
+
+                NodoRegistro n = new NodoRegistro(
+                        raf.readInt(),
+                        raf.readInt(),
+                        raf.readDouble(),
+                        raf.readInt(),
+                        raf.readLong()
+                );
+
+                if (n.nivelSincronizacion() < 80) {
+                    return new Hallazgo(
+                            "Pérdida de sincronización",
+                            "Sincronización inferior al umbral configurado; la evidencia textual específica no está disponible.",
+                            List.of(),
+                            Set.of(n.idNumerico()),
+                            Set.of("N00" + n.idNumerico()),
+                            Set.of(),
+                            "INDETERMINADO"
+                    );
+                }
+
+                if (n.codigoEstado() == 2) {
+                    return new Hallazgo(
+                            "Fallo de nodo",
+                            "El estado binario marca un nodo como fallido.",
+                            List.of(),
+                            Set.of(n.idNumerico()),
+                            Set.of("N00" + n.idNumerico()),
+                            Set.of(),
+                            "ALTA"
+                    );
+                }
+            }
+        }
+
+        return new Hallazgo(
+                "No determinado",
+                "No se encontraron evidencias suficientes para atribuir uno de los seis incidentes.",
+                List.of(),
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                "INDETERMINADO"
+        );
     }
 
     private Hallazgo hallazgo(String nombre, Evento e, String conclusion, Set<Integer> binarios, Set<String> entidades, Set<String> zonas) {
@@ -177,5 +273,16 @@ public class AnalizadorForense {
 
     private record Hallazgo(String nombre, String conclusion, List<Evento> eventos, Set<Integer> idsNodosBinarios,
                             Set<String> entidades, Set<String> zonas, String certeza) { }
+    private Set<String> crearConjunto(String... ids) {
+        Set<String> conjunto = new LinkedHashSet<>();
+
+        for (String id : ids) {
+            if (id != null && !id.isBlank()) {
+                conjunto.add(id);
+            }
+        }
+
+        return conjunto;
+    }
 }
 
