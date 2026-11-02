@@ -41,24 +41,31 @@ class RotacionLogsTest {
         LoggerContext contexto = null;
         try {
             URI configuracion = getClass().getResource("/log4j2.xml").toURI();
-            contexto = Configurator.initialize("rotacion-test", getClass().getClassLoader(), configuracion);
+            // Contexto propio: no reutiliza el de los tests (log4j2-test.xml), que ya está inicializado.
+            contexto = new LoggerContext("rotacion-test", null, configuracion);
+            contexto.start();
             Logger logger = contexto.getLogger("rotacion");
             for (int i = 0; i < 200; i++) {
                 logger.info("Línea de prueba {} para superar el límite de tamaño del log técnico", i);
             }
         } finally {
-            if (contexto != null) Configurator.shutdown(contexto);
+            if (contexto != null) contexto.stop();
             System.clearProperty("matrix.logDir");
         }
 
+        String contenido;
+        try (Stream<Path> todo = Files.walk(logs)) {
+            contenido = todo.map(Path::toString).collect(java.util.stream.Collectors.joining(", "));
+        }
         Path runtime = logs.resolve("runtime");
-        assertTrue(Files.exists(runtime.resolve("matrix-runtime.log")), "log activo");
+        assertTrue(Files.exists(runtime.resolve("matrix-runtime.log")), "log activo; contenido de la carpeta: " + contenido);
         List<Path> historicos;
         try (Stream<Path> ficheros = Files.list(runtime)) {
             historicos = ficheros.filter(p -> p.getFileName().toString().endsWith(".log.gz")).toList();
         }
-        assertFalse(historicos.isEmpty(), "debe existir al menos un histórico comprimido");
+        assertFalse(historicos.isEmpty(), "debe existir al menos un histórico comprimido; contenido: " + contenido);
         assertTrue(historicos.size() <= 10, "no se conservan más históricos que el máximo configurado");
         historicos.forEach(p -> assertTrue(p.getFileName().toString().matches("matrix-runtime-\\d{4}-\\d{2}-\\d{2}-\\d+\\.log\\.gz")));
     }
+
 }
