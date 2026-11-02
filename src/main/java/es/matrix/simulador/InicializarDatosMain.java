@@ -4,6 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import es.matrix.configuracion.RunLogging;
 import es.matrix.modelo.Evento;
 import es.matrix.modelo.NodoRegistro;
+import es.matrix.persistencia.BinaryNodeRepository;
+import es.matrix.persistencia.JsonRulesRepository;
+import es.matrix.persistencia.TextEventRepository;
+import es.matrix.persistencia.XmlWorldRepository;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,21 +18,15 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import es.matrix.persistencia.BinaryNodeRepository;
-import es.matrix.persistencia.JsonRulesRepository;
-import es.matrix.persistencia.TextEventRepository;
-import es.matrix.persistencia.XmlWorldRepository;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-/** Punto de entrada de la fase 1: crea simulador iniciales y prueba las cuatro persistencias. */
+/** Crea los ficheros iniciales (si faltan) y comprueba las cuatro persistencias. */
 public class InicializarDatosMain {
     private static final Path DATOS = Path.of("datos");
 
     public static void main(String[] args) {
         ejecutar();
     }
-    public static void ejecutar(){
+
+    public static void ejecutar() {
         try {
             RunLogging.iniciar("inicializacion");
         } catch (Exception e) {
@@ -36,36 +36,43 @@ public class InicializarDatosMain {
         Logger logger = LogManager.getLogger(InicializarDatosMain.class);
         Logger evidencia = LogManager.getLogger("EVIDENCIA");
         try {
-            Files.createDirectories(DATOS);
-            crearReglasSiNoExisten();
-            crearEstadoXmlSiNoExiste();
-            crearHistoricoSiNoExiste();
-            crearBinarioSiNoExiste();
+            inicializar(DATOS);
 
             TextEventRepository eventos = new TextEventRepository(DATOS.resolve("operaciones.txt"));
             BinaryNodeRepository nodos = new BinaryNodeRepository(DATOS.resolve("nodos.dat"));
             XmlWorldRepository mundo = new XmlWorldRepository(DATOS.resolve("estado.xml"));
             JsonRulesRepository reglasRepo = new JsonRulesRepository(DATOS.resolve("reglas.json"));
 
-            System.out.println("=== Matrix: comprobación de contrato de simulador ===");
+            System.out.println("=== Matrix: comprobación de los ficheros de datos ===");
             System.out.println("Eventos TXT leídos: " + eventos.leerTodos().size());
             System.out.println("Registros BIN: " + nodos.contarRegistros());
             System.out.println("Nodo N002 leído por acceso directo: " + nodos.leerPorId(2));
             JsonNode reglas = reglasRepo.leerReglas();
             System.out.println("Sincronización mínima: " + reglas.path("sincronizacion").path("nivelMinimo").asInt());
             System.out.println("XML válido; raíz: " + mundo.leerEstado().getDocumentElement().getTagName());
-            System.out.println("Fase 1 inicializada correctamente.");
-            logger.info("Inicialización y comprobación de simulador completadas");
+            System.out.println("Datos inicializados correctamente.");
+            logger.info("Inicialización y comprobación de los datos completadas");
             evidencia.info("INICIALIZACION_COMPLETADA | eventos={} | nodos={}", eventos.leerTodos().size(), nodos.contarRegistros());
         } catch (Exception e) {
-            logger.error("No se pudo inicializar la fase 1", e);
+            logger.error("No se pudo inicializar los datos", e);
             evidencia.error("ERROR_INICIALIZACION | mensaje={}", e.getMessage());
-            System.err.println("No se pudo inicializar la fase 1: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("No se pudo inicializar los datos: " + e.getMessage());
         }
     }
 
-    private static void crearReglasSiNoExisten() throws IOException {
+    /**
+     * Crea en la carpeta indicada los cuatro ficheros de datos que falten.
+     * No sobrescribe los que ya existen. Se usa también desde las pruebas (con @TempDir).
+     */
+    public static void inicializar(Path DATOS) throws IOException {
+        Files.createDirectories(DATOS);
+        crearReglasSiNoExisten(DATOS);
+        crearEstadoXmlSiNoExiste(DATOS);
+        crearHistoricoSiNoExiste(DATOS);
+        crearBinarioSiNoExiste(DATOS);
+    }
+
+    private static void crearReglasSiNoExisten(Path DATOS) throws IOException {
         Path archivo = DATOS.resolve("reglas.json");
         if (Files.notExists(archivo)) {
             String json = """
@@ -81,7 +88,7 @@ public class InicializarDatosMain {
         }
     }
 
-    private static void crearEstadoXmlSiNoExiste() throws IOException {
+    private static void crearEstadoXmlSiNoExiste(Path DATOS) throws IOException {
         Path archivo = DATOS.resolve("estado.xml");
         if (Files.notExists(archivo)) {
             String xml = """
@@ -130,21 +137,21 @@ public class InicializarDatosMain {
         }
     }
 
-    private static void crearHistoricoSiNoExiste() throws IOException {
+    private static void crearHistoricoSiNoExiste(Path DATOS) throws IOException {
         Path archivo = DATOS.resolve("operaciones.txt");
         if (Files.notExists(archivo)) {
             TextEventRepository repo = new TextEventRepository(archivo);
             LocalDateTime ahora = LocalDateTime.now().withNano(0);
             List<Evento> iniciales = List.of(
-                    new Evento("E0001", ahora, "S001", "CONEXION", "Z001", "OK"),
-                    new Evento("E0002", ahora.plusSeconds(2), "A001", "INSPECCION", "Z001", "OK"),
-                    new Evento("E0003", ahora.plusSeconds(4), "S003", "ACCESO", "Z002", "OK")
+                    new Evento("E0001", ahora.minusSeconds(6), "S001", "CONEXION", "Z001", "OK"),
+                    new Evento("E0002", ahora.minusSeconds(4), "A001", "INSPECCION", "Z001", "OK"),
+                    new Evento("E0003", ahora.minusSeconds(2), "S003", "ACCESO", "Z002", "OK")
             );
             for (Evento evento : iniciales) repo.guardar(evento);
         }
     }
 
-    private static void crearBinarioSiNoExiste() throws IOException {
+    private static void crearBinarioSiNoExiste(Path DATOS) throws IOException {
         Path archivo = DATOS.resolve("nodos.dat");
         if (Files.notExists(archivo) || Files.size(archivo) == 0) {
             BinaryNodeRepository repo = new BinaryNodeRepository(archivo);
@@ -154,4 +161,3 @@ public class InicializarDatosMain {
         }
     }
 }
-
