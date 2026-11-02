@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" monitorInterval="0">
     <Properties>
-        <Property name="runtimeDir">logs/runtime</Property>
-        <Property name="evidenceDir">logs/evidencias</Property>
+        <Property name="matrixLogDir">${sys:matrix.logDir:-logs}</Property>
+        <Property name="runtimeDir">${matrixLogDir}/runtime</Property>
+        <Property name="evidenceDir">${matrixLogDir}/evidencias</Property>
         <Property name="runId">${sys:matrix.runId:-sin-identificador}</Property>
         <Property name="pattern">%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%t] %c{1} - %msg%n</Property>
     </Properties>
@@ -13,7 +14,7 @@
                      append="true" ignoreExceptions="false">
             <PatternLayout pattern="${pattern}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="5 MB"/>
+                <SizeBasedTriggeringPolicy size="10 KB"/>
             </Policies>
             <DefaultRolloverStrategy max="10" fileIndex="min"/>
         </RollingFile>
