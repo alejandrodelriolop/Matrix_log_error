@@ -1,252 +1,138 @@
-# Matrix — Fase 1: contrato de datos
+# Matrix — simulador y analizador forense
 
-Proyecto Maven para establecer las cuatro persistencias del contrato de datos:
+Repositorio: <https://github.com/alejandrodelriolop/Matrix_log_error>
 
-- `datos/operaciones.txt`: histórico secuencial con eventos separados por `|` y fecha ISO 8601.
-- `datos/nodos.dat`: un registro binario fijo de 28 bytes por nodo, consultado/modificado mediante `RandomAccessFile`.
-- `datos/estado.xml`: estado actual y relaciones del mundo Matrix, procesado con DOM.
-- `datos/reglas.json`: reglas y umbrales, leídos con Jackson.
+Práctica UD1 de Acceso a Datos (DAM): manejo de ficheros en Java. Dos programas independientes:
+
+- **Simulador**: representa la operativa de una simulación *Matrix* (sujetos conectados, agentes, zonas y nodos),
+  persiste lo que ocurre en TXT, BIN y XML y puede provocar uno de seis incidentes.
+- 
+- **Analizador forense**: lee **solo los ficheros** (no recibe el tipo de incidente ni usa los logs de Log4j),
+  relaciona las tres fuentes y determina qué incidente es compatible con los datos.
 
 ## Requisitos
 
-- JDK 21 o superior.
-- Maven.
-- IntelliJ IDEA (opcional).
-## Ejecutar
+- JDK 21 o superior y Maven 3.9+.
+- Dependencias (las descarga Maven): Jackson 2.22.4 (JSON), Log4j 2.26.1, JUnit 5.11.4 (pruebas).
 
-Desde la carpeta raíz del proyecto:
+## Estructura
 
-```bash
-mvn Çclean compile exec:java
+```
+src/main/java/es/matrix/
+  simulador/      SimuladorMain, SimuladorMatrix, InicializarDatosMain
+  forense/        AnalizadorForenseMain, AnalizadorForense
+  persistencia/   TextEventRepository (TXT), BinaryNodeRepository (BIN), XmlWorldRepository (XML/DOM), JsonRulesRepository (JSON)
+  incidentes/     IncidenteMatrix, EventoCriticoException
+  modelo/         Evento, NodoRegistro, ResultadoForense
+  configuracion/  RunLogging, DemoRotacionLogsMain
+src/main/resources/log4j2.xml   configuración externa de Log4j 2
+src/test/java/                  pruebas JUnit 5
+datos/                          ficheros que genera el simulador (ejemplo incluido)
+resultados/                     ficheros que genera el analizador (ejemplo incluido)
+logs/runtime/                   log técnico con rotación (.log.gz)
+logs/evidencias/                un log de evidencia por ejecución
+docs/OBSERVABILIDAD.md          investigación del Anexo II
 ```
 
-La primera ejecución crea los ficheros que falten y muestra una comprobación de lectura 
-de las cuatro persistencias. No sobrescribe el XML, JSON ni TXT que ya existan. 
-El BIN se crea con cuatro registros si todavía no existe o está vacío.
+## Ficheros de datos y cómo se relacionan
 
-## Notas
+| Fichero | Formato | Responsabilidad |
+|---|---|---|
+| `datos/operaciones.txt` | TXT | **Histórico** secuencial: `idEvento\|idEjecucion\|fechaHora\|actorId\|tipoOperacion\|objetivoId\|resultado` (ISO 8601). |
+| `datos/nodos.dat` | BIN | **Mediciones actuales** de cada nodo: registros fijos de 28 bytes (`id`, `sincronización`, `carga`, `código de estado`, `nº operaciones`) con `RandomAccessFile`: se añade, se lee y se modifica por posición `(id-1)*28` con `seek()`. |
+| `datos/estado.xml` | XML (DOM) | **Estructura y estado**: sujetos, agentes, zonas, nodos y permisos. |
+| `datos/reglas.json` | JSON (Jackson) | **Umbrales**: sincronización mínima (80), carga máxima (90), integridad mínima (80). |
 
-Esta fase solo implementa el contrato y las operaciones básicas de persistencia. 
-Todavía no implementa el simulador de 30 segundos, los seis incidentes, Log4j, el analizador forense ni las salidas
+Claves de relación: `actorId`/`objetivoId` del TXT son IDs del XML (sujeto, agente, zona, nodo);
+`idBinario` de cada `<nodo>` del XML es el ID del registro en el BIN; `<nodo zonaId>` une cada zona con su nodo;
+`idEjecucion` (`RUN-…`) agrupa los eventos de una ejecución (los eventos antiguos de 6 campos se leen como `LEGACY`).
 
-# Matrix — Fase 2: simulador básico
+## Incidentes (6)
 
-Proyecto Maven para la práctica de persistencia de datos de Matrix.
+Ningún fichero contiene el nombre del incidente: cada uno deja una huella distinta y coherente en TXT, BIN y XML.
 
-## Qué incluye esta fase
+| # | Incidente | TXT | BIN (nodo afectado) | XML |
+|---|---|---|---|---|
+| 1 | Pérdida de sincronización | `COMPROBACION_SINCRONIZACION … ALERTA` sobre un nodo | sincronización < mínimo | nodo `DEGRADADO` |
+| 2 | Comportamiento anómalo de un sujeto | ≥ 3 `CAMBIO_ZONA` seguidos del mismo sujeto | carga > máximo en el nodo de la zona final | sujeto `ANOMALO` en una zona sin permiso |
+| 3 | Acceso no autorizado | `ACCESO` de un sujeto a una zona | carga > máximo en el nodo de esa zona | **no existe** `<permiso>` de ese sujeto para esa zona |
+| 4 | Fallo de nodo | `OPERACION_NODO … FALLO` | código de estado 2 (sincronización 0, carga 100) | nodo `FALLO` |
+| 5 | Agente fuera de protocolo | `ACCION_AGENTE` en una zona | carga > máximo en el nodo de esa zona | la zona difiere de su `zonaAsignada`; agente `FUERA_PROTOCOLO` |
+| 6 | Alteración de zona | `COMPROBACION_INTEGRIDAD … ALERTA` sobre una zona | sincronización del nodo de la zona < mínimo | integridad de la zona < mínimo, estado `ALTERADA` |
 
-- Conserva las cuatro persistencias de la fase 1.
-- `SimuladorMain`: menú de inicio y selección entre modo normal y modo de pruebas.
-- `SimuladorMatrix`: coordina una simulación de 30 segundos.
-- Genera operaciones normales de conexión, acceso, inspección y comprobación de integridad.
-- Añade cada operación a `datos/operaciones.txt`.
-- Actualiza un registro fijo de `datos/nodos.dat` mediante `RandomAccessFile`.
-- Actualiza el estado del nodo correspondiente en `datos/estado.xml`.
-- Lee `datos/reglas.json` y comprueba que los datos iniciales son válidos.
+### Cómo decide el analizador
 
-**Importante:** el modo de pruebas está preparado como opción de ejecución, pero la selección e inyección real 
-de los seis incidentes se implementará en la fase 3. Esta fase todavía no incorpora Log4j ni el analizador forense.
+1. Toma la **última ejecución** del histórico (`idEjecucion`), de modo que un incidente antiguo no se confunde con uno nuevo.
+2. Busca el síntoma en el TXT y lo **contrasta** con el BIN (lectura directa por `seek`) y con el XML, usando los umbrales de `reglas.json`.
+3. Acepta un incidente solo si **al menos dos fuentes** coinciden: certeza `ALTA` (TXT+BIN+XML) o `MEDIA` (dos fuentes).
+   Si no hay evidencia suficiente devuelve `INDETERMINADO` y lista las anomalías residuales que encuentre.
 
+## Ejecución
 
-## Preparar los datos
-
-Desde la raíz del proyecto, ejecutar una vez:
-
-```bash
-mvn clean compile exec:java
-```
-
-Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinicia automáticamente.
-
-## Ejecutar el simulador
-
-Desde la raíz del proyecto:
+Desde la raíz del proyecto (el directorio de trabajo debe ser la carpeta con `pom.xml` y `datos/`).
 
 ```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
+mvn compile
+
+# 1. Crear los ficheros de datos iniciales (no sobrescribe los existentes)
+mvn -q exec:java -Dexec.mainClass=es.matrix.simulador.InicializarDatosMain
+
+# 2a. Simulador — modo normal (30 s, con un 3 % de probabilidad de incidente aleatorio por ciclo)
+mvn -q exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain -Dexec.args="--modo=normal --duracion=30"
+
+# 2b. Simulador — modo de pruebas: provoca un incidente concreto (1..6, ver tabla)
+mvn -q exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain -Dexec.args="--modo=pruebas --incidente=3 --duracion=10"
+
+# 2c. O bien el menú interactivo (1 = inicializar, 2 = simulador)
+mvn -q exec:java
+
+# 3. Analizador forense (programa independiente; --auto evita la confirmación S/N)
+mvn -q exec:java -Dexec.mainClass=es.matrix.forense.AnalizadorForenseMain -Dexec.args="--auto"
+
+# 4. Demostración de rotación de logs
+mvn -q exec:java -Dexec.mainClass=es.matrix.configuracion.DemoRotacionLogsMain
 ```
 
-Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
+Salidas del analizador en `resultados/`:
 
-## Archivos de datos
+- `informe.txt` — incidente, certeza, efectos detectados, conclusión y evidencias.
+- `anomalias.dat` — BIN con **solo** los registros de nodo anómalos usados en el análisis (mismo formato de 28 bytes).
+- `entidades_afectadas.json` — **solo** los elementos del XML que intervienen (zona, nodo, sujeto, permisos…).
 
-- `datos/operaciones.txt`: histórico secuencial, seis campos separados por `|`.
-- `datos/nodos.dat`: cuatro registros binarios de 28 bytes, modificados mediante acceso directo.
-- `datos/estado.xml`: estado actual y relaciones del mundo Matrix.
-- `datos/reglas.json`: umbrales y reglas de configuración.
+No ejecutes la inicialización entre la simulación y el análisis si quieres conservar las evidencias.
+Los datos se acumulan entre ejecuciones; para empezar de cero borra `datos/` y vuelve a inicializar.
 
-## Límites conocidos de la fase 2
-
-- No implementa todavía los seis incidentes ni sus excepciones críticas.
-- El modo de pruebas aún no permite seleccionar un incidente concreto.
-- No incluye la configuración de Log4j ni el analizador forense.
-- Las operaciones son deliberadamente básicas; los cambios de zona, permisos y consecuencias de incidentes se añadirán en las fases posteriores.
-# Matrix — Fase 1: contrato de datos
-
-Proyecto Maven para establecer las cuatro persistencias del contrato de datos:
-
-- `datos/operaciones.txt`: histórico secuencial con eventos separados por `|` y fecha ISO 8601.
-- `datos/nodos.dat`: un registro binario fijo de 28 bytes por nodo, consultado/modificado mediante `RandomAccessFile`.
-- `datos/estado.xml`: estado actual y relaciones del mundo Matrix, procesado con DOM.
-- `datos/reglas.json`: reglas y umbrales, leídos con Jackson.
-
-## Ejecutar
-
-Desde la carpeta raíz del proyecto:
+## Pruebas automatizadas
 
 ```bash
-mvn clean compile exec:java
+mvn test
 ```
 
-La primera ejecución crea los ficheros que falten y muestra una comprobación de lectura de las cuatro persistencias. No sobrescribe el XML, JSON ni TXT que ya existan. El BIN se crea con cuatro registros si todavía no existe o está vacío.
+JUnit 5 con directorios temporales (`@TempDir`) y semillas fijas. Cubren: TXT, BIN con `RandomAccessFile`
+(alta, lectura directa y modificación), XML, JSON, la excepción crítica de cada incidente (parametrizada),
+la identificación de los seis incidentes por el analizador (parametrizada), el uso exclusivo de la última ejecución,
+el caso `INDETERMINADO`, las salidas del analizador, el flujo completo
+datos → incidente → persistencia → análisis → salidas y la rotación real de logs de Log4j.
 
-## Notas
+## Logs (Log4j 2)
 
-Esta fase solo implementa el contrato y las operaciones básicas de persistencia. Todavía no implementa el simulador de 30 segundos, los seis incidentes, Log4j, el analizador forense ni las salidas
+Configuración externa en `src/main/resources/log4j2.xml`. Cada línea lleva fecha y hora, nivel, logger y mensaje.
 
-# Matrix — Fase 2: simulador básico
+- **Evidencias por ejecución**: `logs/evidencias/matrix-<tipo>-AAAAMMDD-HHmmss-SSS.log` (simulador, inicialización y analizador).
+- **Log técnico con rotación**: `logs/runtime/matrix-runtime.log`.
+   - *¿Qué provoca el rollover?* Que el fichero activo alcance **2 KB** (`SizeBasedTriggeringPolicy`), pequeño a propósito para demostrarlo.
+   - *¿Cómo se nombran los históricos?* `matrix-runtime-AAAA-MM-DD-N.log.gz` (fecha + índice).
+   - *¿Cuántos se conservan?* **10** (`DefaultRolloverStrategy max="10"`): suficiente para tener historia reciente sin crecer sin límite.
+   - *¿Para qué comprimir?* Los históricos ocupan mucho menos y se archivan o copian más rápido.
+   - *¿Log activo vs rotado?* El activo es el que se sigue escribiendo; el rotado está cerrado, comprimido y ya no cambia.
+- Los datos de la anomalía se persisten **antes** de lanzar `EventoCriticoException`; el `catch` solo registra con Log4j
+  y finaliza de forma controlada.
 
-Proyecto Maven para la práctica de persistencia de datos de Matrix.
+## Decisiones de diseño
 
-## Qué incluye esta fase
+- Java I/O clásico (`RandomAccessFile`, `BufferedReader/Writer`) y NIO.2 (`Path`, `Files`) combinados.
+- Rutas relativas y `Files.createDirectories` antes de usar cada carpeta; recursos con try-with-resources.
+- DOM para el XML (estructura pequeña que se consulta y modifica en memoria) y Jackson para las reglas.
+- Registros BIN de longitud fija para poder calcular la posición con `seek()` sin recorrer el fichero.
 
-- Conserva las cuatro persistencias de la fase 1.
-- `SimuladorMain`: menú de inicio y selección entre modo normal y modo de pruebas.
-- `SimuladorMatrix`: coordina una simulación de 30 segundos.
-- Genera operaciones normales de conexión, acceso, inspección y comprobación de integridad.
-- Añade cada operación a `datos/operaciones.txt`.
-- Actualiza un registro fijo de `datos/nodos.dat` mediante `RandomAccessFile`.
-- Actualiza el estado del nodo correspondiente en `datos/estado.xml`.
-- Lee `datos/reglas.json` y comprueba que los datos iniciales son válidos.
-
-**Importante:** el modo de pruebas está preparado como opción de ejecución, pero la selección e inyección real de los seis incidentes se implementará en la fase 3. Esta fase todavía no incorpora Log4j ni el analizador forense.
-
-
-## Preparar los datos
-
-Desde la raíz del proyecto, ejecutar una vez:
-
-```bash
-mvn clean compile exec:java
-```
-
-Este comando ejecuta `InicializarDatosMain`. Si ya existen datos, no los reinicia automáticamente.
-
-## Ejecutar el simulador
-
-Desde la raíz del proyecto:
-
-```bash
-mvn compile exec:java -Dexec.mainClass=es.matrix.simulador.SimuladorMain
-```
-
-Elegir `1` para simulación normal o `2` para el modo de pruebas. La ejecución dura 30 segundos y añade operaciones al histórico existente. Para volver a probar desde un estado limpio, guarda una copia de `datos/` y ejecuta la inicialización con archivos de datos vacíos o restaurados.
-
-## Archivos de datos
-
-- `datos/operaciones.txt`: histórico secuencial, seis campos separados por `|`.
-- `datos/nodos.dat`: cuatro registros binarios de 28 bytes, modificados mediante acceso directo.
-- `datos/estado.xml`: estado actual y relaciones del mundo Matrix.
-- `datos/reglas.json`: umbrales y reglas de configuración.
-
-## Límites conocidos de la fase 2
-
-- No implementa todavía los seis incidentes ni sus excepciones críticas.
-- El modo de pruebas aún no permite seleccionar un incidente concreto.
-- No incluye la configuración de Log4j ni el analizador forense.
-- Las operaciones son deliberadamente básicas; los cambios de zona, permisos y consecuencias de incidentes se añadirán en las fases posteriores.
-
-## Incidentes de prueba
-1. Pérdida de sincronización.
-2. Comportamiento anómalo de un sujeto.
-3. Acceso no autorizado.
-4. Fallo de nodo.
-5. Agente fuera de protocolo.
-6. Alteración de zona.
-
-Al inyectar un incidente, el simulador persiste evidencia en los archivos TXT, BIN y/o XML correspondientes y después lanza `EventoCriticoException`, que detiene la ejecución de forma controlada. No se escribe una etiqueta explícita con el número/tipo de incidente en los archivos: el analizador forense deberá deducirlo cruzando las evidencias.
-
-## Importante
-- Ejecuta las configuraciones con el directorio de trabajo en la raíz del proyecto (la carpeta que contiene `pom.xml` y `datos/`).
-- Los datos se conservan entre ejecuciones. Si quieres repetir una prueba desde un estado inicial, haz copia de seguridad de `datos/` y vuelve a inicializar solo los archivos que corresponda.
-- El modo normal incluye una probabilidad pequeña de incidente aleatorio.
-
-## Pendiente para fases posteriores
-Configuración de Log4j, analizador forense independiente, informes TXT/BIN/JSON, pruebas JUnit y documentación final.
-
-## Fase 4: logging con Log4j 2
-
-Esta fase añade Log4j 2 con configuración externa en `src/main/resources/log4j2.xml`.
-
-- `logs/runtime/matrix-runtime.log`: registro técnico de ejecución. Al superar 5 MB rota a archivos `.gz`; se conservan hasta 10 archivos rotados por política de Log4j.
-- `logs/evidencias/`: crea un archivo de evidencias por ejecución, con identificador basado en fecha y hora. Registra eventos persistidos e incidentes después de guardar sus evidencias en los archivos de datos.
-- La evidencia de un incidente se guarda primero en TXT/XML/BIN según corresponda; después se registra el incidente y se lanza `EventoCriticoException`. El manejador de la excepción registra la parada controlada.
-
-### Ejecutar
-
-1. Abre la carpeta raíz del proyecto como proyecto Maven.
-2. Comprueba que el directorio de trabajo sea la raíz del proyecto, donde están `pom.xml` y `datos/`.
-3. Ejecuta `InicializarDatosMain` si necesitas inicializar los archivos.
-4. Ejecuta `SimuladorMain`. Para reproducir un incidente, selecciona el modo 2.
-5. Revisa `logs/evidencias/` y `logs/runtime/`.
-
-No borres ni reinicialices los archivos de datos si necesitas conservar evidencias de una ejecución anterior. Los logs se excluyen de Git según `.gitignore`, así que conserva aparte los logs de las ejecuciones relevantes que exige la práctica.
-
-## Fase 5 — Analizador forense independiente
-
-Se añade `es.matrix.forense.AnalizadorForenseMain`, un segundo punto de entrada separado del simulador. Lee `datos/operaciones.txt`, `datos/nodos.dat`, `datos/estado.xml` y `datos/reglas.json` desde disco, sin reutilizar objetos en memoria del simulador.
-
-### Ejecutar
-1. Ejecuta el simulador y selecciona un incidente en modo de pruebas.
-2. Cuando el simulador se detenga, ejecuta `AnalizadorForenseMain`.
-3. Confirma con `S` para comenzar el análisis.
-4. Consulta los tres resultados en `resultados/`:
-    - `informe.txt`: conclusión, evidencias y nivel de certeza.
-    - `anomalias.dat`: registros binarios relevantes para el hallazgo.
-    - `entidades_afectadas.json`: subconjunto de entidades afectadas encontrado en el XML.
-
-El analizador no usa los logs de Log4j como fuente de detección. Si no encuentra evidencias concluyentes, 
-informa `INDETERMINADO` en vez de afirmar un incidente sin pruebas. Los archivos de resultados se sobrescriben en cada análisis.
-
-# Matrix — Fase 6: pruebas y documentación
-
-Esta fase añade una primera batería de pruebas automatizadas con JUnit 5 al proyecto de la Fase 5. No sustituye las pruebas manuales de los seis incidentes; permite comprobar las piezas principales de persistencia de forma aislada.
-
-## Ejecutar las pruebas
-1. Abre esta carpeta como proyecto Maven.
-2. Espera a que Maven sincronice las dependencias.
-3. Ejecuta `mvn test` desde el terminal de IntelliJ, o abre `src/test/java` y ejecuta las clases de prueba.
-
-Las pruebas usan carpetas temporales de JUnit; no deberían modificar los archivos reales de `datos/`.
-
-## Pruebas incluidas
-- Conversión de eventos a línea TXT y recuperación del evento.
-- Rechazo de líneas TXT inválidas y campos con separadores.
-- Escritura, lectura y modificación de registros BIN mediante acceso directo.
-- Rechazo de archivos BIN incompletos y de IDs inexistentes.
-- Validación de reglas JSON válidas y fuera de rango.
-- Actualización de estado XML y rechazo de estados inválidos.
-
-## Ejecutar la aplicación
-- Inicialización: `simulador`
-- Simulador: `simulador`
-- Analizador: `es.matrix.forense.AnalizadorForenseMain`
-
-No ejecutes `InicializarDatosMain` entre la simulación y el análisis si necesitas conservar las evidencias generadas.
-
-## Limitaciones conocidas
-Esta batería verifica componentes de persistencia de forma aislada. 
-Antes de entregar, ejecuta manualmente los seis incidentes desde el modo de pruebas y comprueba los tres artefactos de `resultados/`. 
-También hay que revisar que el analizador distingue incidentes cuando se acumulan datos de varias ejecuciones. 
-La compilación debe verificarse en el entorno local con JDK 21 y Maven.
-
-## Identificador de ejecución en el histórico
-
-El formato nuevo de `datos/operaciones.txt` tiene siete campos:
-`idEvento|idEjecucion|fechaHora|actorId|tipoOperacion|objetivoId|resultado`.
-Cada arranque del simulador genera un identificador `RUN-...` que se reutiliza en todos los eventos de esa ejecución.
-Las líneas antiguas de seis campos se pueden leer y se etiquetan como `LEGACY`, porque no existe información suficiente para reconstruir su ejecución original. 
-Los eventos nuevos se guardan siempre en formato de siete campos.
-
-El identificador permite agrupar eventos por ejecución, pero por sí solo no conserva estados históricos de BIN/XML 
-ni convierte el analizador actual en un analizador de múltiples hallazgos.                                                º
+Ver [OBSERVABILIDAD.md](OBSERVABILIDAD.md).
