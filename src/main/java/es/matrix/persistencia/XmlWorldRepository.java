@@ -70,6 +70,13 @@ public class XmlWorldRepository {
         agente.setAttribute("estado", estado);
         guardar(document);
     }
+    public void actualizarEstadoSujeto(String idSujeto, String estado) throws IOException {
+        Document document = leerEstado();
+        Element sujeto = buscarPorId(document, "sujeto", idSujeto);
+        if (sujeto == null) throw new IOException("No existe el sujeto " + idSujeto + ".");
+        sujeto.setAttribute("estado", estado);
+        guardar(document);
+    }
     public void actualizarZonaSujeto(String idSujeto, String idZona) throws IOException {
         Document document = leerEstado();
         if (buscarPorId(document, "zona", idZona) == null) {
