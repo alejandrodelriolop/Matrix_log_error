@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuración de Log4j solo para las pruebas: no escribe ficheros en el proyecto. -->
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{HH:mm:ss} %-5level %c{1} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="EVIDENCIA" level="off" additivity="false"/>
+        <Root level="off">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
