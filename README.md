@@ -31,7 +31,6 @@ datos/                          ficheros que genera el simulador (ejemplo inclui
 resultados/                     ficheros que genera el analizador (ejemplo incluido)
 logs/runtime/                   log técnico con rotación (.log.gz)
 logs/evidencias/                un log de evidencia por ejecución
-docs/OBSERVABILIDAD.md          investigación del Anexo II
 ```
 
 ## Ficheros de datos y cómo se relacionan
