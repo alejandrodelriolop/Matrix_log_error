@@ -6,14 +6,14 @@ Práctica UD1 de Acceso a Datos (DAM): manejo de ficheros en Java. Dos programas
 
 - **Simulador**: representa la operativa de una simulación *Matrix* (sujetos conectados, agentes, zonas y nodos),
   persiste lo que ocurre en TXT, BIN y XML y puede provocar uno de seis incidentes.
-- 
+
 - **Analizador forense**: lee **solo los ficheros** (no recibe el tipo de incidente ni usa los logs de Log4j),
   relaciona las tres fuentes y determina qué incidente es compatible con los datos.
 
 ## Requisitos
 
 - JDK 21 o superior y Maven 3.9+.
-- Dependencias (las descarga Maven): Jackson 2.22.4 (JSON), Log4j 2.26.1, JUnit 5.11.4 (pruebas).
+- Dependencias (las descarga Maven): Jackson 2.22.4 (JSON), Log4j2 2.26.1, JUnit 5.11.4 (pruebas).
 
 ## Estructura
 
@@ -108,8 +108,8 @@ Los datos se acumulan entre ejecuciones; para empezar de cero borra `datos/` y v
 mvn test
 ```
 
-JUnit 5 con directorios temporales (`@TempDir`) y semillas fijas. Cubren: TXT, BIN con `RandomAccessFile`
-(alta, lectura directa y modificación), XML, JSON, la excepción crítica de cada incidente (parametrizada),
+JUnit 5 con directorios temporales (`@TempDir`) y semillas fijas. 
+Cubren: TXT, BIN con `RandomAccessFile`(alta, lectura directa y modificación), XML, JSON, la excepción crítica de cada incidente (parametrizada),
 la identificación de los seis incidentes por el analizador (parametrizada), el uso exclusivo de la última ejecución,
 el caso `INDETERMINADO`, las salidas del analizador, el flujo completo
 datos → incidente → persistencia → análisis → salidas y la rotación real de logs de Log4j.
